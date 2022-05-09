@@ -26,3 +26,4 @@ TODO: paragraph format
 TODO: paragraph format
 - Shell isn't interactive yet
 - Could inf loop if none port is avalaible
+- Rebember to clear locks for testing
